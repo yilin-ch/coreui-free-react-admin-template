@@ -7,6 +7,7 @@ import {
   cilCursor,
   cilDescription,
   cilDrop,
+  cilHistory,
   cilNotes,
   cilPencil,
   cilPuzzle,
@@ -18,13 +19,16 @@ import { CNavGroup, CNavItem, CNavTitle } from '@coreui/react'
 const _nav = [
   {
     component: CNavItem,
-    name: 'Dashboard',
+    name: 'Realtime',
     to: '/dashboard',
     icon: <CIcon icon={cilSpeedometer} customClassName="nav-icon" />,
-    badge: {
-      color: 'info',
-      text: 'NEW',
-    },
+  },
+  {
+    component: CNavItem,
+    name: 'History',
+    to: '/history',
+    icon: <CIcon icon={cilHistory} customClassName="nav-icon" />,
+    
   },
   {
     component: CNavTitle,
