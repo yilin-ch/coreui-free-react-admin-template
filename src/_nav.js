@@ -123,6 +123,11 @@ const _nav = [
       },
       {
         component: CNavItem,
+        name: 'Tabs',
+        to: '/base/tabs',
+      },
+      {
+        component: CNavItem,
         name: 'Tooltips',
         to: '/base/tooltips',
       },
