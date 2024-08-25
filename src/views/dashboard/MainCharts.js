@@ -14,6 +14,8 @@ import {
 
 Chart.register(zoomPlugin);
 
+const MAX_DATA_POINTS = 200;
+
 const useRealTimeData = () => {
   const [data, setData] = useState([]);
   const [timestamps, setTimestamps] = useState([]);
@@ -29,8 +31,14 @@ const useRealTimeData = () => {
       if (message.msg && message.msg.data) {
         const newData = message.msg.data;
         const newTimestamp = new Date().toISOString();
-        setData(prevData => [...prevData, newData]);
-        setTimestamps(prevTimestamps => [...prevTimestamps, newTimestamp]);
+        setData(prevData => {
+          const updatedData = [...prevData, newData];
+          return updatedData.length > MAX_DATA_POINTS ? updatedData.slice(-MAX_DATA_POINTS) : updatedData;
+        });
+        setTimestamps(prevTimestamps => {
+          const updatedTimstamp = [...prevTimestamps, newTimestamp];
+          return updatedTimstamp.length > MAX_DATA_POINTS ? updatedTimstamp.slice(-MAX_DATA_POINTS) : updatedTimstamp;
+        });
       }
     }
   }, [lastMessage]);
