@@ -3,9 +3,8 @@ import { Engine, Scene } from '@babylonjs/core';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
-import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
+import '@babylonjs/loaders/glTF';
 
 import {
   CCard,
@@ -15,59 +14,83 @@ import {
   CButton,
   CButtonGroup,
   CRow,
-  CTooltip,
+  CCardText,
+  CDropdown,
+  CDropdownToggle,
+  CDropdownMenu,
+  CDropdownItem,
+  CForm,
+  CFormInput,
+  CFormLabel,
+  CInputGroup,
+  CModal,
+  CModalHeader,
+  CModalTitle,
+  CModalBody,
+  CModalFooter,
 } from '@coreui/react';
 import { cilResizeWidth } from '@coreui/icons';
 import CIcon from '@coreui/icons-react';
 import DataChart from './MainCharts';
-import BehaviorControlModal from './BehaviorControlModal';  // Import the new component
-
-const getRandomText = () => {
-  const texts = [
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    "Pellentesque ac felis tellus.",
-    "Mauris efficitur nulla ut elit varius sagittis.",
-    "Suspendisse potenti.",
-    "Praesent venenatis metus at tortor pulvinar varius.",
-  ];
-  return texts[Math.floor(Math.random() * texts.length)];
-};
+import BehaviorControlModal from './BehaviorControlModal';
+import { WebSocketProvider } from './WebSocketProvider'; // Import the WebSocketProvider
 
 const Dashboard = () => {
-  const [selectedCharts, setSelectedCharts] = useState(['PelvisTX']);
-  const [fullWidth, setFullWidth] = useState(false); // State to manage chart layout
-  const [currentSection, setCurrentSection] = useState(0); // State to manage current section
-  const [responseMessage, setResponseMessage] = useState(''); // State to hold response message
-  const [branch, setBranch] = useState(0); // State to hold branch value
-  const [visible, setVisible] = useState(false);  // Modal visibility state
+  const [subjectInfo, setSubjectInfo] = useState({
+    id: '',
+    weight: '',
+    height: ''
+  });
+  const [fileName, setFileName] = useState('');  // New state for file name
+  const [filePath, setFilePath] = useState('');  // New state for file path
+  const [selectedCharts, setSelectedCharts] = useState(['pelvis_tx']);
+  const [fullWidth, setFullWidth] = useState(false);
+  const [currentSection, setCurrentSection] = useState(0);
+  const [responseMessage, setResponseMessage] = useState('');
+  const [branch, setBranch] = useState(0);
+  const [ctrlVisible, setCtrlVisible] = useState(false);
+  const [recordVisible, setRecordVisible] = useState(false);
   const reactCanvas = useRef(null);
+  const cameraRef = useRef(null);
+
+  const chartDetails = [
+    'pelvis_tilt',
+    'pelvis_list',
+    'pelvis_rotation',
+    'pelvis_tx',
+    'pelvis_ty',
+    'pelvis_tz',
+    'hip_flexion_r',
+    'hip_adduction_r',
+    'hip_rotation_r',
+    'hip_flexion_l',
+    'hip_adduction_l',
+    'hip_rotation_l',
+    'lumbar_extension',
+    'lumbar_bending',
+    'lumbar_rotation',
+    'knee_angle_r',
+    'knee_angle_l',
+    'ankle_angle_r',
+    'ankle_angle_l',
+  ];
 
   useEffect(() => {
     if (reactCanvas.current) {
       const engine = new Engine(reactCanvas.current, true);
       const scene = new Scene(engine);
 
-      const camera = new ArcRotateCamera(
-        'camera',
-        -Math.PI / 2,
-        Math.PI / 2.5,
-        3,
-        new Vector3(0, 1, 0),
-        scene
-      );
+      const camera = new ArcRotateCamera('camera', -Math.PI / 2, Math.PI / 2.5, 3, new Vector3(0, 1, 0), scene);
       camera.attachControl(reactCanvas.current, true);
+      cameraRef.current = camera;
 
       const light = new HemisphericLight('light', new Vector3(1, 1, 0), scene);
       light.intensity = 0.7;
 
-      const box = MeshBuilder.CreateBox('box', { size: 1 }, scene);
-      const boxMaterial = new StandardMaterial('boxMaterial', scene);
-      boxMaterial.diffuseColor = new Color3(0, 1, 0);
-      box.material = boxMaterial;
+      SceneLoader.Append('', 'PHOBOS_gait1992_zero_pose.glb', scene, function (scene) {});
 
       engine.runRenderLoop(() => {
         scene.render();
-        box.rotation.y += 0.01;
       });
 
       const resize = () => {
@@ -83,19 +106,42 @@ const Dashboard = () => {
     }
   }, []);
 
-  const handleChartToggle = (chartType) => {
-    setSelectedCharts(prevSelectedCharts =>
-      prevSelectedCharts.includes(chartType)
-        ? prevSelectedCharts.filter(chart => chart !== chartType)
-        : [...prevSelectedCharts, chartType]
-    );
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setSubjectInfo({ ...subjectInfo, [name]: value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Subject Information:", subjectInfo);
+    // Perform validation and processing here, e.g., sending data to backend
+  };
+
+  const handleZoomIn = () => {
+    if (cameraRef.current) {
+      cameraRef.current.radius -= 0.5;
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (cameraRef.current) {
+      cameraRef.current.radius += 0.5;
+    }
   };
 
   const toggleFullWidth = () => {
     setFullWidth(!fullWidth);
   };
 
-  const handleButtonClick = (message, branchValue = 0) => {
+  const handleChartToggle = (chartName) => {
+    setSelectedCharts((prevSelectedCharts) =>
+      prevSelectedCharts.includes(chartName)
+        ? prevSelectedCharts.filter((chart) => chart !== chartName)
+        : [...prevSelectedCharts, chartName]
+    );
+  };
+
+  const handleSetupClick = async (message, branchValue = 0) => {
     const topic = '/flexbe/command/transition';
     fetch('http://localhost:8000/publish/', {
       method: 'POST',
@@ -107,193 +153,303 @@ const Dashboard = () => {
       .then(response => response.json())
       .then(data => {
         console.log('Success:', data);
-        setResponseMessage(`Success: ${JSON.stringify(data)}`); // Update response message
       })
       .catch((error) => {
         console.error('Error:', error);
-        setResponseMessage(`Error: ${error.toString()}`); // Update response message
       });
-  };
-
-  const handleNextSection = () => {
-    if (currentSection < sections.length - 1) {
-      setCurrentSection(currentSection + 1);
-      setResponseMessage(''); // Clear response message when moving to the next section
+    setLoading(true);
+    setError(null); // Reset error state
+    try {
+      // Simulate async behavior
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setLoading(false);
+      setTransitionMessage('Transition successful!'); // Show success message
+      setTimeout(() => setTransitionMessage(''), 2000); // Clear message after 2 seconds
+    } catch (error) {
+      setLoading(false);
+      setError('Failed to execute setup. Please try again.');
     }
   };
 
-  const handleLoopBack = () => {
-    setCurrentSection(2); // Jump to the 3rd subsection (index 2)
-    setResponseMessage(''); // Clear response message when moving to the loop back section
+  const handleSetNameAndPath = async () => {
+    if (!fileName || !filePath) {
+      alert('Please provide both filename and file path');
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://localhost:8000/set_name_and_path/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filename: fileName, filepath: filePath }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        console.log('ROS Service Response:', data);
+        alert('ROS service called successfully!');
+      } else {
+        alert('Failed to call ROS service');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
+  
 
-  const sections = [
-    {
-      text: getRandomText(),
-      message: 'Setup',
-    },
-    {
-      text: getRandomText(),
-      message: 'TurnOnIMUs',
-    },
-    {
-      text: getRandomText(),
-      message: 'InitialCalibration',
-    },
-    {
-      text: getRandomText(),
-      message: 'AlignWithVicon',
-    },
-    {
-      text: getRandomText(),
-      message: 'Run',
-    },
-    {
-      text: getRandomText(),
-      message: 'Redo',
-    },
-  ];
-
-  const chartDetails = [
-    { name: 'PelvisTX', dataIndex: 0, label: 'PelvisTX', backgroundColor: 'rgba(220, 220, 220, 0.2)', borderColor: 'rgba(220, 220, 220, 1)' },
-    { name: 'PelvisTY', dataIndex: 1, label: 'PelvisTY', backgroundColor: 'rgba(151, 187, 205, 0.2)', borderColor: 'rgba(151, 187, 205, 1)' },
-    { name: 'PelvisTZ', dataIndex: 2, label: 'PelvisTZ', backgroundColor: 'rgba(153, 255, 220, 0.2)', borderColor: 'rgba(151, 255, 220, 1)' },
-    { name: 'KneeAngleR', dataIndex: 3, label: 'Knee Angle Right', backgroundColor: 'rgba(220, 220, 220, 0.2)', borderColor: 'rgba(220, 220, 220, 1)' },
-    { name: 'KneeAngleL', dataIndex: 4, label: 'Knee Angle Left', backgroundColor: 'rgba(151, 187, 205, 0.2)', borderColor: 'rgba(151, 187, 205, 1)' },
-    { name: 'AnkleAngleR', dataIndex: 5, label: 'Ankle Angle Right', backgroundColor: 'rgba(220, 220, 220, 0.2)', borderColor: 'rgba(220, 220, 220, 1)' },
-    { name: 'AnkleAngleL', dataIndex: 6, label: 'Ankle Angle Left', backgroundColor: 'rgba(151, 187, 205, 0.2)', borderColor: 'rgba(151, 187, 205, 1)' },
-  ];
-
-  const currentSectionContent = sections[currentSection];
+  const [startedRecord, setStartedRecord] = useState(false);
+  const [recordDisabled, setRecordDisabled] = useState(false);
+  const [stopDisabled, setStopDisabled] = useState(true);
+  const [re_recordDisabled, setRe_recordDisabled] = useState(true);
 
   return (
-    <>
-      <CCard className="mb-4">
-        <CCardHeader>
-          <CRow>
-            <CCol sm={5}>
-              <h4 id="realTimeData" className="card-title mb-0">
-                Real-Time Calculated Data
-              </h4>
-            </CCol>
-            <CCol sm={7} className="d-none d-md-block">
-              <CButtonGroup className="float-end me-3">
-                {chartDetails.map((chart) => (
-                  <CButton
-                    color="outline-secondary"
-                    key={chart.name}
-                    className="mx-0"
-                    active={selectedCharts.includes(chart.name)}
-                    onClick={() => handleChartToggle(chart.name)}
-                  >
-                    {chart.name}
+    <WebSocketProvider>  {/* Wrap the dashboard in the WebSocketProvider */}
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <CCard className="mb-4" style={{ flex: 1 }}>
+          <CCardHeader>
+            <h4 className="card-title mb-0">Subject Information</h4>
+          </CCardHeader>
+          <CCardBody>
+            <CForm onSubmit={handleSubmit}>
+              <CRow className="mb-3">
+                <CCol>
+                  <CFormLabel htmlFor="id">Subject ID</CFormLabel>
+                  <CInputGroup>
+                    <CFormInput
+                      type="text"
+                      id="id"
+                      name="id"
+                      value={subjectInfo.id}
+                      onChange={handleInputChange}
+                      placeholder="Enter subject ID"
+                    />
+                  </CInputGroup>
+                </CCol>
+                <CCol>
+                  <CFormLabel htmlFor="weight">Weight (kg)</CFormLabel>
+                  <CInputGroup>
+                    <CFormInput
+                      type="number"
+                      id="weight"
+                      name="weight"
+                      value={subjectInfo.weight}
+                      onChange={handleInputChange}
+                      placeholder="Enter weight"
+                    />
+                  </CInputGroup>
+                </CCol>
+                <CCol>
+                  <CFormLabel htmlFor="height">Height (cm)</CFormLabel>
+                  <CInputGroup>
+                    <CFormInput
+                      type="number"
+                      id="height"
+                      name="height"
+                      value={subjectInfo.height}
+                      onChange={handleInputChange}
+                      placeholder="Enter height"
+                    />
+                  </CInputGroup>
+                </CCol>
+              </CRow>
+              <CButton color="primary" type="submit">
+                Submit
+              </CButton>
+            </CForm>
+          </CCardBody>
+        </CCard>
+
+        <CCard className="mb-4" style={{ flex: 1 }}>
+          <CCardHeader>
+            <h4 className="card-title mb-0">ROS-OpenSimRT Control</h4>
+          </CCardHeader>
+          <CCardBody>
+            <CCardText className="mt-3">
+              This section allows you to control and set up the ROS-OpenSimRT system, including configurations for the IMU and insole sensors.
+            </CCardText>
+            <CCardText className="mt-3">
+              Use the buttons below to initialize, calibrate, and run the system as needed.
+            </CCardText>
+            <CButton color="primary" className="me-2" onClick={() => setCtrlVisible(true)}>
+              Control Behavior
+            </CButton>
+
+            <CForm>
+              <CRow className="mb-3">
+                <CCol>
+                  <CFormLabel htmlFor="fileName">File Name</CFormLabel>
+                  <CInputGroup>
+                    <CFormInput
+                      type="text"
+                      id="fileName"
+                      name="fileName"
+                      value={fileName}
+                      onChange={(e) => setFileName(e.target.value)}
+                      placeholder="Enter file name"
+                    />
+                  </CInputGroup>
+                </CCol>
+                <CCol>
+                  <CFormLabel htmlFor="filePath">File Path</CFormLabel>
+                  <CInputGroup>
+                    <CFormInput
+                      type="text"
+                      id="filePath"
+                      name="filePath"
+                      value={filePath}
+                      onChange={(e) => setFilePath(e.target.value)}
+                      placeholder="Enter file path"
+                    />
+                  </CInputGroup>
+                </CCol>
+                <CCol>
+                  <CButton color="primary" onClick={handleSetNameAndPath} style={{ marginTop: '30px' }}>
+                    Submit
                   </CButton>
-                ))}
-              </CButtonGroup>
-            </CCol>
-          </CRow>
-          <CButton
-            color="outline-secondary"
-            className="float-end me-3"
-            onClick={toggleFullWidth}
-            size="sm"
-            style={{ marginTop: '10px', marginBottom: '10px' }}
-          >
-            <CIcon icon={cilResizeWidth} className='me-2' />
-            Large Chart              
-          </CButton>
-        </CCardHeader>
-        <CCardBody>
-          <CRow>
-            {selectedCharts.map((chartName) => {
-              const chartDetail = chartDetails.find(chart => chart.name === chartName);
-              return (
+                </CCol>
+              </CRow>
+              {responseMessage && (
+                <p>{responseMessage}</p>
+              )}
+            </CForm>
+
+            <div style={{ marginTop: '10px' }}>
+              <CButton
+                color="primary"
+                className="me-2"
+                onClick={() => {
+                  setRecordVisible(true);
+                }}
+                disabled={recordDisabled}
+              >
+                Start Recording
+              </CButton>
+              <CButton
+                color="primary"
+                className="me-2"
+                onClick={() => {
+                  handleSetupClick("stop_recording_question_mark");
+                  setRe_recordDisabled(false);
+                  setStopDisabled(true);
+                }}
+                disabled={stopDisabled}
+              >
+                Stop
+              </CButton>
+              <CButton
+                color="primary"
+                className="me-2"
+                onClick={() => {
+                  handleSetupClick("record_another", 0);
+                  setRe_recordDisabled(true);
+                  setRecordDisabled(false);
+                }}
+                disabled={re_recordDisabled}
+              >
+                Record Another
+              </CButton>
+            </div>
+          </CCardBody>
+          <CModal alignment="center" visible={recordVisible} onClose={() => setRecordVisible(false)}>
+            <CModalHeader onClose={() => setRecordVisible(false)}>
+              Start Recording
+            </CModalHeader>
+            <CModalBody>
+              <p>
+                Please make sure you have done all the setup before recording.
+              </p>
+            </CModalBody>
+            <CModalFooter>
+              <CButton
+                color="secondary"
+                onClick={() => {
+                  handleSetupClick("Start_Recording_Question_Mark");
+                  setStopDisabled(false);
+                  setRecordDisabled(true);
+                }}
+              >
+                Start
+              </CButton>
+            </CModalFooter>
+          </CModal>
+        </CCard>
+
+        <BehaviorControlModal visible={ctrlVisible} onClose={() => setCtrlVisible(false)} />
+
+        <CCard className="mb-4">
+          <CCardHeader>
+            <CRow>
+              <CCol sm={5}>
+                <h4 id="realTimeData" className="card-title mb-0">
+                  Real-Time Calculated Data
+                </h4>
+              </CCol>
+              <CCol sm={7} className="d-none d-md-block">
+                <CDropdown className="float-end">
+                  <CDropdownToggle color="primary">Select Charts</CDropdownToggle>
+                  <CDropdownMenu>
+                    {chartDetails.map((chartName) => (
+                      <CDropdownItem key={chartName} onClick={() => handleChartToggle(chartName)}>
+                        <input
+                          type="checkbox"
+                          checked={selectedCharts.includes(chartName)}
+                          onChange={() => handleChartToggle(chartName)}
+                        />{' '}
+                        {chartName.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </CDropdownItem>
+                    ))}
+                  </CDropdownMenu>
+                </CDropdown>
+              </CCol>
+            </CRow>
+            <CButton
+              color="outline-secondary"
+              className="float-end me-3"
+              onClick={toggleFullWidth}
+              size="sm"
+              style={{ marginTop: '10px', marginBottom: '10px' }}
+            >
+              <CIcon icon={cilResizeWidth} className="me-2" />
+              Large Chart
+            </CButton>
+          </CCardHeader>
+          <CCardBody>
+            <CRow>
+              {selectedCharts.map((chartName) => (
                 <CCol md={fullWidth ? 12 : 6} key={chartName}>
                   <DataChart
-                    dataIndex={chartDetail.dataIndex}
-                    label={chartDetail.label}
-                    backgroundColor={chartDetail.backgroundColor}
-                    borderColor={chartDetail.borderColor}
+                    dataIndex={chartDetails.indexOf(chartName)}
+                    label={chartName.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                   />
                 </CCol>
-              );
-            })}
-          </CRow>
-        </CCardBody>
-      </CCard>
-      <CCard className="mb-4">
-        <CCardHeader>
-          <h4 id="3dAnimation" className="card-title mb-0">
-            Animation
-          </h4>
-        </CCardHeader>
-        <CCardBody>
-          <canvas ref={reactCanvas} style={{ width: '100%', height: '400px' }}></canvas>
-        </CCardBody>
-      </CCard>
-      <CCard className="mb-4">
-        <CCardHeader>
-          <h4 className="card-title mb-0">ROS-OpenSimRT Control</h4>
-        </CCardHeader>
-        <CCardBody>
-          <CCard className="mb-4">
-            <CCardHeader>
-              <h5 className="card-title mb-0">{currentSectionContent.message}</h5>
-            </CCardHeader>
-            <CCardBody>
-              <p>{currentSectionContent.text}</p>
-            </CCardBody>
-          </CCard>
-          {responseMessage && (
-            <CCard className="mb-4">
-              <CCardHeader>
-                <h5>Response Message</h5>
-              </CCardHeader>
-              <CCardBody>
-                <p>{responseMessage}</p>
-              </CCardBody>
-            </CCard>
-          )}
-          <div className="d-flex justify-content-end">
-            {currentSection < 5 && (
-              <CButton color="primary" onClick={() => handleButtonClick(currentSectionContent.message)}>
-                Set
-              </CButton>
-            )}
-            {currentSection === 5 && (
-              <>
-                <CButton color="primary" onClick={() => handleButtonClick(currentSectionContent.message)}>
-                  Redo
-                </CButton>
-                <CButton color="secondary" className="ms-2" onClick={() => handleButtonClick(currentSectionContent.message, 1)}>
-                  Finish
-                </CButton>
-                <CButton color="secondary" className="ms-2" onClick={handleLoopBack}>
-                  Loop back
-                </CButton>
-              </>
-            )}
-            {currentSection < sections.length - 1 && (
-              <CButton color="secondary" className="ms-2" onClick={handleNextSection}>
-                Next
-              </CButton>
-            )}
-          </div>
-        </CCardBody>
-      </CCard>
+              ))}
+            </CRow>
+          </CCardBody>
+        </CCard>
 
-      {/* Button to trigger the BehaviorControlModal */}
-      <CButton color="info" className="me-2" onClick={() => setVisible(true)}>
-        Control Behavior
-      </CButton>
-
-      {/* Behavior Control Modal */}
-      <BehaviorControlModal visible={visible} onClose={() => setVisible(false)} />
-    </>
+        <CCard className="mb-4">
+          <CCardHeader>
+            <h4 id="3dAnimation" className="card-title mb-0">
+              Motion Viewer
+            </h4>
+          </CCardHeader>
+          <CCardBody>
+            <div style={{ position: 'relative', height: '100%' }}>
+              <canvas ref={reactCanvas} style={{ width: '100%', height: '100%' }}></canvas>
+              <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+                <CButtonGroup>
+                  <CButton color="primary" onClick={handleZoomIn}>Zoom In</CButton>
+                  <CButton color="secondary" onClick={handleZoomOut}>Zoom Out</CButton>
+                </CButtonGroup>
+              </div>
+            </div>
+          </CCardBody>
+        </CCard>
+      </div>
+    </WebSocketProvider>  
   );
 };
 
 export default Dashboard;
-
-
-

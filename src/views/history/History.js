@@ -1,23 +1,23 @@
 import React, { useEffect, useState, useRef } from "react";
-import { CCard, CCardBody, CCardHeader, CListGroup, CListGroupItem, CSpinner, CButton, CButtonGroup, CRow, CCol, CFormRange } from "@coreui/react";
+import { CCard, CCardBody, CCardHeader, CListGroup, CListGroupItem, CSpinner, CButton, CButtonGroup, CRow, CCol, CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CFormRange } from "@coreui/react";
 import { CChartLine } from '@coreui/react-chartjs';
 import CIcon from '@coreui/icons-react';
-import { cilCloudDownload, cilReload, cilZoomIn, cilZoomOut } from '@coreui/icons';
+import { cilReload, cilZoomIn, cilZoomOut } from '@coreui/icons';
 import Chart from 'chart.js/auto';
 import zoomPlugin from 'chartjs-plugin-zoom';
-import { getStyle } from '@coreui/utils';
 
 Chart.register(zoomPlugin);
+
+const MAX_VISIBLE_POINTS = 100; // Maximum number of points visible at a time
 
 const History = () => {
   const [filenames, setFilenames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [selectedCharts, setSelectedCharts] = useState(['PelvisTX']);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [maxIndex, setMaxIndex] = useState(0);
-  const dataLimit = 50;
+  const [selectedColumns, setSelectedColumns] = useState(['pelvis_tx']);
+  const [startIndex, setStartIndex] = useState(0); // Control visible data range
+  const [zoomLevel, setZoomLevel] = useState(MAX_VISIBLE_POINTS); // Zoom level controls how much data is visible
   const chartRef = useRef(null);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ const History = () => {
       .then(data => {
         setChartData(data);
         setLoading(false);
-        setMaxIndex(Math.max(data.pelvis_tx.length - dataLimit, 0));
+        setStartIndex(0); // Reset scrolling when new file is selected
       })
       .catch(error => {
         console.error('Error fetching file data:', error);
@@ -49,29 +49,56 @@ const History = () => {
       });
   };
 
-  const handleChartToggle = (chartType) => {
-    setSelectedCharts(prevSelectedCharts =>
-      prevSelectedCharts.includes(chartType)
-        ? prevSelectedCharts.filter(chart => chart !== chartType)
-        : [...prevSelectedCharts, chartType]
+  // Handle column selection toggle
+  const handleColumnToggle = (columnName) => {
+    setSelectedColumns(prevSelectedColumns =>
+      prevSelectedColumns.includes(columnName)
+        ? prevSelectedColumns.filter(column => column !== columnName)
+        : [...prevSelectedColumns, columnName]
     );
   };
 
-  const handleRangeChange = (e) => {
-    setCurrentIndex(parseInt(e.target.value, 10));
+  // Handle zooming in and out by changing how much data is visible
+  const handleZoom = (inOrOut) => {
+    setZoomLevel((prevZoom) => {
+      const newZoom = inOrOut === 'in' ? prevZoom - 20 : prevZoom + 20;
+      return Math.max(20, Math.min(newZoom, chartData?.pelvis_tx?.length || MAX_VISIBLE_POINTS)); // Clamp the zoom level
+    });
   };
 
-  const getLimitedData = (data) => {
-    return data.slice(currentIndex, currentIndex + dataLimit);
+  // Handle scrolling through the data using a range input (scrollbar)
+  const handleScroll = (e) => {
+    const newIndex = parseInt(e.target.value, 10);
+    setStartIndex(newIndex);
+  };
+
+  // Function to reset zoom and scrolling
+  const resetZoomAndScroll = () => {
+    setZoomLevel(MAX_VISIBLE_POINTS); // Reset zoom level
+    setStartIndex(0); // Reset scroll to the beginning
+  };
+
+  // Dynamically generate chart details based on selected columns and visible data
+  const getChartDetails = () => {
+    if (!chartData) return {};
+    
+    return selectedColumns.reduce((acc, column) => {
+      if (chartData[column]) {
+        acc[column] = {
+          label: column.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+          data: chartData[column].slice(startIndex, startIndex + zoomLevel), // Only show data within the zoom/scroll range
+          backgroundColor: "rgba(75, 192, 192, 0.2)",
+          borderColor: "rgba(75, 192, 192, 1)"
+        };
+      }
+      return acc;
+    }, {});
   };
 
   const chartOptions = {
     animation: false,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
       zoom: {
         pan: {
           enabled: true,
@@ -93,28 +120,13 @@ const History = () => {
     },
     scales: {
       x: {
-        grid: {
-          color: getStyle('--cui-border-color-translucent'),
-          drawOnChartArea: false,
-        },
         ticks: {
-          color: getStyle('--cui-body-color'),
           autoSkip: true,
           maxTicksLimit: 10,
         },
       },
       y: {
         beginAtZero: true,
-        border: {
-          color: getStyle('--cui-border-color-translucent'),
-        },
-        grid: {
-          color: getStyle('--cui-border-color-translucent'),
-        },
-        ticks: {
-          color: getStyle('--cui-body-color'),
-          maxTicksLimit: 5,
-        },
       },
     },
     elements: {
@@ -122,84 +134,15 @@ const History = () => {
         tension: 0.4,
       },
       point: {
-        radius: 0,
+        radius: 0, // Remove points
         hitRadius: 10,
-        hoverRadius: 4,
-        hoverBorderWidth: 3,
+        hoverRadius: 0, // No hover effect on points
       },
     },
   };
 
-  const resetZoom = () => {
-    if (chartRef.current) {
-      chartRef.current.resetZoom();
-    }
-  };
-
-  const zoomIn = (axis) => {
-    if (chartRef.current) {
-      const zoomOptions = {
-        x: axis === 'x' ? 1.1 : 1,
-        y: axis === 'y' ? 1.1 : 1,
-      };
-      chartRef.current.zoom(zoomOptions);
-    }
-  };
-
-  const zoomOut = (axis) => {
-    if (chartRef.current) {
-      const zoomOptions = {
-        x: axis === 'x' ? 0.9 : 1,
-        y: axis === 'y' ? 0.9 : 1,
-      };
-      chartRef.current.zoom(zoomOptions);
-    }
-  };
-
-  const chartDetails = {
-    PelvisTX: {
-      label: 'Pelvis TX',
-      data: getLimitedData(chartData?.pelvis_tx || []),
-      backgroundColor: "rgba(220, 220, 220, 0.2)",
-      borderColor: "rgba(220, 220, 220, 1)"
-    },
-    PelvisTY: {
-      label: 'Pelvis TY',
-      data: getLimitedData(chartData?.pelvis_ty || []),
-      backgroundColor: "rgba(151, 187, 205, 0.2)",
-      borderColor: "rgba(151, 187, 205, 1)"
-    },
-    PelvisTZ: {
-      label: 'Pelvis TZ',
-      data: getLimitedData(chartData?.pelvis_tz || []),
-      backgroundColor: "rgba(153, 255, 220, 0.2)",
-      borderColor: "rgba(151, 255, 220, 1)"
-    },
-    KneeAngleR: {
-      label: 'Knee Angle Right',
-      data: getLimitedData(chartData?.knee_angle_r || []),
-      backgroundColor: "rgba(220, 220, 220, 0.2)",
-      borderColor: "rgba(220, 220, 220, 1)"
-    },
-    KneeAngleL: {
-      label: 'Knee Angle Left',
-      data: getLimitedData(chartData?.knee_angle_l || []),
-      backgroundColor: "rgba(151, 187, 205, 0.2)",
-      borderColor: "rgba(151, 187, 205, 1)"
-    },
-    AnkleAngleR: {
-      label: 'Ankle Angle Right',
-      data: getLimitedData(chartData?.ankle_angle_r || []),
-      backgroundColor: "rgba(220, 220, 220, 0.2)",
-      borderColor: "rgba(220, 220, 220, 1)"
-    },
-    AnkleAngleL: {
-      label: 'Ankle Angle Left',
-      data: getLimitedData(chartData?.ankle_angle_l || []),
-      backgroundColor: "rgba(151, 187, 205, 0.2)",
-      borderColor: "rgba(151, 187, 205, 1)"
-    },
-  };
+  const chartDetails = getChartDetails();
+  const maxScrollIndex = (chartData?.pelvis_tx?.length || 0) - zoomLevel;
 
   return (
     <CCard>
@@ -220,41 +163,42 @@ const History = () => {
         )}
         {chartData && (
           <>
-            <CRow>
+            <div style={{ marginTop: '10px' }}>
+            <CRow >
               <CCol sm={5}>
-              
+                <h4>Charts</h4>
               </CCol>
               <CCol sm={7}>
-                <CButtonGroup className="float-end me-3">
-                  {Object.keys(chartDetails).map((key) => (
-                    <CButton
-                      color="outline-secondary"
-                      key={key}
-                      className="mx-0"
-                      active={selectedCharts.includes(key)}
-                      onClick={() => handleChartToggle(key)}
-                      style={{ marginTop: '10px', marginBottom: '10px' }}
-                    >
-                      {key}
-                    </CButton>
-                  ))}
-                </CButtonGroup>
+                <CDropdown className="float-end">
+                  <CDropdownToggle color="primary">Select Charts</CDropdownToggle>
+                  <CDropdownMenu>
+                    {Object.keys(chartData).map((column) => (
+                      <CDropdownItem key={column} onClick={() => handleColumnToggle(column)}>
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns.includes(column)}
+                          onChange={() => handleColumnToggle(column)}
+                        />{' '}
+                        {column.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </CDropdownItem>
+                    ))}
+                  </CDropdownMenu>
+                </CDropdown>
               </CCol>
             </CRow>
+            </div>
+            
+
             <div style={{ position: 'relative', width: '100%' }}>
               <div style={{ overflowX: 'scroll', width: '100%', paddingTop: '50px' }}>
-                <div style={{ width: Math.max(1000, getLimitedData(chartDetails[selectedCharts[0]]?.data || []).length * 10) }}>
-                  {selectedCharts.map((chartType) => (
-                    <div key={chartType} style={{ marginBottom: '20px' }}> 
-                    <h5 style={{ textAlign: 'center' }}>{chartDetails[chartType]?.label}</h5> {/* Add this line to display the chart name */}
-
-
+                {selectedColumns.map((chartType) => (
+                  <div key={chartType} style={{ marginBottom: '20px' }}>
+                    <h5 style={{ textAlign: 'center' }}>{chartDetails[chartType]?.label}</h5>
                     <CChartLine
-                      key={chartType}
                       ref={chartRef}
                       style={{ height: '400px', marginTop: '40px' }}
                       data={{
-                        labels: Array.from({ length: getLimitedData(chartDetails[chartType]?.data || []).length }, (_, i) => i + 1 + currentIndex),
+                        labels: Array.from({ length: chartDetails[chartType]?.data.length || 0 }, (_, i) => startIndex + i + 1),
                         datasets: [
                           {
                             label: chartDetails[chartType]?.label,
@@ -268,36 +212,33 @@ const History = () => {
                       }}
                       options={chartOptions}
                     />
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-              <div style={{ textAlign: 'center', marginTop: '20px', marginBottom: '20px' }}>
-                <CButton color="secondary" onClick={resetZoom} style={{ marginRight: '10px' }} size="sm">
-                  <CIcon icon={cilReload} className='me-2' />
-                  Reset
-                </CButton>
-                <CButtonGroup role="group" aria-label="Zoom Buttons" className="float-end me-3" size="sm">
-                  <CButton color="secondary" onClick={() => zoomIn('x')}>
-                    Zoom In X
-                  </CButton>
-                  <CButton color="secondary" onClick={() => zoomOut('x')}>
-                    Zoom Out X
-                  </CButton>
-                  <CButton color="secondary" onClick={() => zoomIn('y')}>
-                    Zoom In Y
-                  </CButton>
-                  <CButton color="secondary" onClick={() => zoomOut('y')}>
-                    Zoom Out Y
-                  </CButton>
-                </CButtonGroup>
-              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '20px', marginBottom: '20px' }}>
+              {/* Scroll bar for scrolling through data */}
               <CFormRange
                 min="0"
-                max={maxIndex}
-                value={currentIndex}
-                onChange={handleRangeChange}
+                max={maxScrollIndex}
+                value={startIndex}
+                onChange={handleScroll}
               />
+              <CButton color="secondary" onClick={resetZoomAndScroll} style={{ marginRight: '10px' }} size="sm">
+                <CIcon icon={cilReload} className='me-2' />
+                Reset
+              </CButton>
+              <CButtonGroup role="group" aria-label="Zoom Buttons" className="float-end me-3" size="sm">
+                <CButton color="secondary" onClick={() => handleZoom('in')}>
+                  <CIcon icon={cilZoomIn} className="me-2" />
+                  Zoom In
+                </CButton>
+                <CButton color="secondary" onClick={() => handleZoom('out')}>
+                  <CIcon icon={cilZoomOut} className="me-2" />
+                  Zoom Out
+                </CButton>
+              </CButtonGroup>
             </div>
           </>
         )}
