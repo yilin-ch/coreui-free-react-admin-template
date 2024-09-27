@@ -57,9 +57,10 @@ export const WebSocketProvider = ({ children }) => {
         const convertedTS = date.toLocaleTimeString('en-US', { hour12: false });
 
         // Convert the data, applying radian-to-degree conversion except for the 3rd, 4th, and 5th columns
-        const convertedData = newData.map(row => convertData(row));
+        const convertedData = convertData(newData);
 
         // Update the refs
+        // console.log('What data looks like:', newData);
         dataRef.current = [...dataRef.current, convertedData].slice(-1000); // Keep latest 1000 entries
         timestampsRef.current = [...timestampsRef.current, convertedTS].slice(-1000);
       }

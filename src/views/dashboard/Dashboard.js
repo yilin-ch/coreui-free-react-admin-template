@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Engine, Scene } from '@babylonjs/core';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Axis,Space } from '@babylonjs/core/Maths/math';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
@@ -87,7 +88,59 @@ const Dashboard = () => {
       const light = new HemisphericLight('light', new Vector3(1, 1, 0), scene);
       light.intensity = 0.7;
 
-      SceneLoader.Append('', 'PHOBOS_gait1992_zero_pose.glb', scene, function (scene) {});
+      SceneLoader.Append('', 'models/scene.babylon', scene, function (meshes, particleSystems, skeletons) {
+        scene.createDefaultCameraOrLight(true, true, true);
+        scene.createDefaultEnvironment();
+
+        // Create a poses object
+        var poses = {
+          default: {
+              sacrum: { rotation: new Vector3(0.1, 0, 0) },
+              // Add other bones and their default rotations here
+          },
+          pose1: {
+              sacrum: { rotation: new Vector3(-Math.PI/2, 0, 0) },
+              //l_pelvis: { rotation: new Vector3(0, -Math.PI / 4, 0) },
+              //r_pelvis: { rotation: new Vector3(0, -Math.PI / 4, 0) },
+              l_femur: { rotation: new Vector3(0, -Math.PI / 4, 0) },
+              r_femur: { rotation: new Vector3(0, -Math.PI / 4, 0) },
+              l_tibia: { rotation: new Vector3(0, 2*Math.PI / 4, 0) },
+              r_tibia: { rotation: new Vector3(0, 2*Math.PI / 4, 0) },
+              l_talus: { rotation: new Vector3(0, -Math.PI / 4, 0) },
+              r_talus: { rotation: new Vector3(0, -Math.PI / 4, 0) },
+              // Add other bones and their rotations for pose1
+          },
+          // Add more poses as needed
+        };
+
+        // Function to apply a pose
+        function applyPose(poseName) {
+          var pose = poses[poseName];
+          for (var boneName in pose) {
+              var node = scene.getNodeByName(boneName);
+              if (node) {
+                  node.rotation = pose[boneName].rotation.clone();
+              }
+          }
+        }
+
+        // Animation loop
+        var angle = 0;
+        scene.registerBeforeRender(function () {
+            angle += 0.01;
+            //applyPose('default'); // Change this to apply different poses
+            applyPose('pose1'); // Change this to apply different poses
+            
+            // Optional: Add some continuous animation
+            var pelvis = scene.getNodeByName("sacrum");
+            if (pelvis) {
+		            //because i added an angle to the origin, now the local and global dont align anymore
+                //pelvis.rotate(BABYLON.Axis.Y, angle, BABYLON.Space.LOCAL);
+                pelvis.rotate(Axis.Z, angle, Space.GLOBAL);
+            }
+        });
+
+      });
 
       engine.runRenderLoop(() => {
         scene.render();
