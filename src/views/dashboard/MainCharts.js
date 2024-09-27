@@ -17,10 +17,20 @@ const DISPLAYED_DATA_POINTS = 100;  // Always display 100 points
 const INITIAL_ZOOM_LEVEL = 1; // Start zoom level
 
 // Custom sampling function
-const sampleData = (data, interval) => {
+const sampleTimestamps = (data, interval) => {
   if (interval < 1) return data;  // If interval is less than 1, return the whole data
   return data.filter((_, index) => index % interval === 0).slice(-DISPLAYED_DATA_POINTS); // Sample the data
 };
+
+const sampleData = (data, dataIndex, interval) => {
+  // Extract only the column that is relevant for the chart
+  const columnData = data.map(row => row[dataIndex]); 
+  
+  // Apply sampling to that column
+  if (interval < 1) return columnData;  // If interval is less than 1, return the whole column
+  return columnData.filter((_, index) => index % interval === 0).slice(-DISPLAYED_DATA_POINTS);
+};
+
 
 const DataChart = ({ dataIndex, label, backgroundColor, borderColor }) => {
   const { data, timestamps } = useContext(WebSocketContext);  // Access shared data and timestamps
@@ -35,11 +45,11 @@ const DataChart = ({ dataIndex, label, backgroundColor, borderColor }) => {
 
   // Adjust sampling based on zoom level
   const getVisibleData = () => {
-    return sampleData(data.slice(-Math.floor(MAX_DATA_POINTS * zoomLevel)), samplingInterval);  // Get the latest subset of data
+    return sampleData(data.slice(-Math.floor(MAX_DATA_POINTS * zoomLevel)), dataIndex, samplingInterval);  // Get the latest subset of data
   };
 
   const getVisibleTimestamps = () => {
-    return sampleData(timestamps.slice(-Math.floor(MAX_DATA_POINTS * zoomLevel)), samplingInterval);  // Get the latest subset of timestamps
+    return sampleTimestamps(timestamps.slice(-Math.floor(MAX_DATA_POINTS * zoomLevel)), samplingInterval);  // Get the latest subset of timestamps
   };
 
   const updateYRange = (newMinY, newMaxY) => {
@@ -92,7 +102,7 @@ const DataChart = ({ dataIndex, label, backgroundColor, borderColor }) => {
                   borderColor,
                   pointBackgroundColor: borderColor,
                   pointBorderColor: "#fff",
-                  data: getVisibleData().map(item => item[dataIndex]),
+                  data: getVisibleData(),
                 },
               ],
             }}
