@@ -18,21 +18,21 @@ export const WebSocketProvider = ({ children }) => {
   // Columns to skip conversion (3rd, 4th, and 5th columns, index starts from 0)
   const skipConversionIndices = [3, 4, 5];
 
-  // Helper function to convert radians to degrees
-  const radToDeg = (rad) => rad * (180 / Math.PI);
+  // // Helper function to convert radians to degrees
+  // const radToDeg = (rad) => rad * (180 / Math.PI);
 
-  // Function to apply the conversion logic
-  const convertData = (newData) => {
-    // Iterate through each data entry and convert relevant columns
-    return newData.map((entry, index) => {
-      // Skip the conversion for the 3rd, 4th, and 5th columns (indices 2, 3, 4)
-      if (skipConversionIndices.includes(index)) {
-        return entry; // No conversion
-      }
-      // Convert the data from radians to degrees
-      return radToDeg(entry);
-    });
-  };
+  // // Function to apply the conversion logic
+  // const convertData = (newData) => {
+  //   // Iterate through each data entry and convert relevant columns
+  //   return newData.map((entry, index) => {
+  //     // Skip the conversion for the 3rd, 4th, and 5th columns (indices 2, 3, 4)
+  //     if (skipConversionIndices.includes(index)) {
+  //       return entry; // No conversion
+  //     }
+  //     // Convert the data from radians to degrees
+  //     return radToDeg(entry);
+  //   });
+  // };
 
   // Function to update data every 150ms
   useEffect(() => {
@@ -53,16 +53,16 @@ export const WebSocketProvider = ({ children }) => {
       if (message.msg && message.msg.data) {
         const newData = message.msg.data;
         const newTimestamp = message.msg.time;
-        const date = new Date(newTimestamp * 1000);
-        const convertedTS = date.toLocaleTimeString('en-US', { hour12: false });
+        // const date = new Date(newTimestamp * 1000);
+        // const convertedTS = date.toLocaleTimeString('en-US', { hour12: false });
 
-        // Convert the data, applying radian-to-degree conversion except for the 3rd, 4th, and 5th columns
-        const convertedData = convertData(newData);
+        // // Convert the data, applying radian-to-degree conversion except for the 3rd, 4th, and 5th columns
+        // const convertedData = convertData(newData);
 
         // Update the refs
         // console.log('What data looks like:', newData);
-        dataRef.current = [...dataRef.current, convertedData].slice(-1000); // Keep latest 1000 entries
-        timestampsRef.current = [...timestampsRef.current, convertedTS].slice(-1000);
+        dataRef.current = [...dataRef.current, newData].slice(-1000); // Keep latest 1000 entries
+        timestampsRef.current = [...timestampsRef.current, newTimestamp].slice(-1000);
       }
     }
   }, [lastMessage]);
