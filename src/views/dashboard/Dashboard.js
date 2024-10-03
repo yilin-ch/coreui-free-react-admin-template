@@ -35,6 +35,7 @@ import CIcon from '@coreui/icons-react';
 import DataChart from './MainCharts';
 import BehaviorControlModal from './BehaviorControlModal';
 import { WebSocketProvider } from './WebSocketProvider'; // Import the WebSocketProvider
+import ROSControlSection from './ROSControlSection';
 
 const Dashboard = () => {
   const [subjectInfo, setSubjectInfo] = useState({
@@ -314,7 +315,9 @@ const Dashboard = () => {
           </CCardBody>
         </CCard>
 
-        <CCard className="mb-4" style={{ flex: 1 }}>
+        <ROSControlSection />
+
+        {/* <CCard className="mb-4" style={{ flex: 1 }}>
           <CCardHeader>
             <h4 className="card-title mb-0">ROS-OpenSimRT Control</h4>
           </CCardHeader>
@@ -427,7 +430,7 @@ const Dashboard = () => {
               </CButton>
             </CModalFooter>
           </CModal>
-        </CCard>
+        </CCard> */}
 
         <BehaviorControlModal visible={ctrlVisible} onClose={() => setCtrlVisible(false)} />
 
