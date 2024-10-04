@@ -292,15 +292,17 @@ const ROSControlSection = () => {
 
         <div className="logs-section mb-3">
           <h5>Behavior Logs</h5>
-          <div className="log-messages">
-            {logs && logs.length === 0 ? (
-              <p>No logs available yet...</p>
-            ) : (
-              logs.map((log, index) => (
-              <p key={index}>{log}</p>
-              ))
-            )}
-          </div>
+          <CCard>
+            <CCardBody style={{ maxHeight: '200px', overflowY: 'auto', backgroundColor: '#f3f4f7'}}>
+              {logs && logs.length === 0 ? (
+                <p>No logs available yet...</p>
+              ) : (
+                logs.map((log, index) => (
+               <p key={index}>{log}</p>
+                ))
+              )}
+            </CCardBody>
+          </CCard>
         </div>
 
 
