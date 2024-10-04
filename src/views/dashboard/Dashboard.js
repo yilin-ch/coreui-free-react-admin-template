@@ -45,7 +45,7 @@ const Dashboard = () => {
   });
   const [fileName, setFileName] = useState('');  // New state for file name
   const [filePath, setFilePath] = useState('');  // New state for file path
-  const [selectedCharts, setSelectedCharts] = useState(['pelvis_tx']);
+  const [selectedCharts, setSelectedCharts] = useState(['knee_angle_l', 'knee_angle_r']);
   const [fullWidth, setFullWidth] = useState(false);
   const [currentSection, setCurrentSection] = useState(0);
   const [responseMessage, setResponseMessage] = useState('');
@@ -193,70 +193,7 @@ const Dashboard = () => {
         ? prevSelectedCharts.filter((chart) => chart !== chartName)
         : [...prevSelectedCharts, chartName]
     );
-  };
-
-  const handleSetupClick = async (message, branchValue = 0) => {
-    const topic = '/flexbe/command/transition';
-    fetch('http://localhost:8000/publish/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ topic, message, branchValue }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Success:', data);
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
-    setLoading(true);
-    setError(null); // Reset error state
-    try {
-      // Simulate async behavior
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setLoading(false);
-      setTransitionMessage('Transition successful!'); // Show success message
-      setTimeout(() => setTransitionMessage(''), 2000); // Clear message after 2 seconds
-    } catch (error) {
-      setLoading(false);
-      setError('Failed to execute setup. Please try again.');
-    }
-  };
-
-  const handleSetNameAndPath = async () => {
-    if (!fileName || !filePath) {
-      alert('Please provide both filename and file path');
-      return;
-    }
-  
-    try {
-      const response = await fetch('http://localhost:8000/set_name_and_path/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ filename: fileName, filepath: filePath }),
-      });
-  
-      if (response.ok) {
-        const data = await response.json();
-        console.log('ROS Service Response:', data);
-        alert('ROS service called successfully!');
-      } else {
-        alert('Failed to call ROS service');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-  
-
-  const [startedRecord, setStartedRecord] = useState(false);
-  const [recordDisabled, setRecordDisabled] = useState(false);
-  const [stopDisabled, setStopDisabled] = useState(true);
-  const [re_recordDisabled, setRe_recordDisabled] = useState(true);
+  };  
 
   return (
     <WebSocketProvider>  {/* Wrap the dashboard in the WebSocketProvider */}
@@ -316,121 +253,6 @@ const Dashboard = () => {
         </CCard>
 
         <ROSControlSection />
-
-        {/* <CCard className="mb-4" style={{ flex: 1 }}>
-          <CCardHeader>
-            <h4 className="card-title mb-0">ROS-OpenSimRT Control</h4>
-          </CCardHeader>
-          <CCardBody>
-            <CCardText className="mt-3">
-              This section allows you to control and set up the ROS-OpenSimRT system, including configurations for the IMU and insole sensors.
-            </CCardText>
-            <CCardText className="mt-3">
-              Use the buttons below to initialize, calibrate, and run the system as needed.
-            </CCardText>
-            <CButton color="primary" className="me-2" onClick={() => setCtrlVisible(true)}>
-              Control Behavior
-            </CButton>
-
-            <CForm>
-              <CRow className="mb-3">
-                <CCol>
-                  <CFormLabel htmlFor="fileName">File Name</CFormLabel>
-                  <CInputGroup>
-                    <CFormInput
-                      type="text"
-                      id="fileName"
-                      name="fileName"
-                      value={fileName}
-                      onChange={(e) => setFileName(e.target.value)}
-                      placeholder="Enter file name"
-                    />
-                  </CInputGroup>
-                </CCol>
-                <CCol>
-                  <CFormLabel htmlFor="filePath">File Path</CFormLabel>
-                  <CInputGroup>
-                    <CFormInput
-                      type="text"
-                      id="filePath"
-                      name="filePath"
-                      value={filePath}
-                      onChange={(e) => setFilePath(e.target.value)}
-                      placeholder="Enter file path"
-                    />
-                  </CInputGroup>
-                </CCol>
-                <CCol>
-                  <CButton color="primary" onClick={handleSetNameAndPath} style={{ marginTop: '30px' }}>
-                    Submit
-                  </CButton>
-                </CCol>
-              </CRow>
-              {responseMessage && (
-                <p>{responseMessage}</p>
-              )}
-            </CForm>
-
-            <div style={{ marginTop: '10px' }}>
-              <CButton
-                color="primary"
-                className="me-2"
-                onClick={() => {
-                  setRecordVisible(true);
-                }}
-                disabled={recordDisabled}
-              >
-                Start Recording
-              </CButton>
-              <CButton
-                color="primary"
-                className="me-2"
-                onClick={() => {
-                  handleSetupClick("stop_recording_question_mark");
-                  setRe_recordDisabled(false);
-                  setStopDisabled(true);
-                }}
-                disabled={stopDisabled}
-              >
-                Stop
-              </CButton>
-              <CButton
-                color="primary"
-                className="me-2"
-                onClick={() => {
-                  handleSetupClick("record_another", 0);
-                  setRe_recordDisabled(true);
-                  setRecordDisabled(false);
-                }}
-                disabled={re_recordDisabled}
-              >
-                Record Another
-              </CButton>
-            </div>
-          </CCardBody>
-          <CModal alignment="center" visible={recordVisible} onClose={() => setRecordVisible(false)}>
-            <CModalHeader onClose={() => setRecordVisible(false)}>
-              Start Recording
-            </CModalHeader>
-            <CModalBody>
-              <p>
-                Please make sure you have done all the setup before recording.
-              </p>
-            </CModalBody>
-            <CModalFooter>
-              <CButton
-                color="secondary"
-                onClick={() => {
-                  handleSetupClick("Start_Recording_Question_Mark");
-                  setStopDisabled(false);
-                  setRecordDisabled(true);
-                }}
-              >
-                Start
-              </CButton>
-            </CModalFooter>
-          </CModal>
-        </CCard> */}
 
         <BehaviorControlModal visible={ctrlVisible} onClose={() => setCtrlVisible(false)} />
 
