@@ -36,6 +36,7 @@ import DataChart from './MainCharts';
 import BehaviorControlModal from './BehaviorControlModal';
 import { WebSocketProvider } from './WebSocketProvider'; // Import the WebSocketProvider
 import ROSControlSection from './ROSControlSection';
+import ProjectManager from './ProjectManager';
 
 const Dashboard = () => {
   const [subjectInfo, setSubjectInfo] = useState({
@@ -198,61 +199,8 @@ const Dashboard = () => {
   return (
     <WebSocketProvider>  {/* Wrap the dashboard in the WebSocketProvider */}
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-        <CCard className="mb-4" style={{ flex: 1 }}>
-          <CCardHeader>
-            <h4 className="card-title mb-0">Subject Information</h4>
-          </CCardHeader>
-          <CCardBody>
-            <CForm onSubmit={handleSubmit}>
-              <CRow className="mb-3">
-                <CCol>
-                  <CFormLabel htmlFor="id">Subject ID</CFormLabel>
-                  <CInputGroup>
-                    <CFormInput
-                      type="text"
-                      id="id"
-                      name="id"
-                      value={subjectInfo.id}
-                      onChange={handleInputChange}
-                      placeholder="Enter subject ID"
-                    />
-                  </CInputGroup>
-                </CCol>
-                <CCol>
-                  <CFormLabel htmlFor="weight">Weight (kg)</CFormLabel>
-                  <CInputGroup>
-                    <CFormInput
-                      type="number"
-                      id="weight"
-                      name="weight"
-                      value={subjectInfo.weight}
-                      onChange={handleInputChange}
-                      placeholder="Enter weight"
-                    />
-                  </CInputGroup>
-                </CCol>
-                <CCol>
-                  <CFormLabel htmlFor="height">Height (cm)</CFormLabel>
-                  <CInputGroup>
-                    <CFormInput
-                      type="number"
-                      id="height"
-                      name="height"
-                      value={subjectInfo.height}
-                      onChange={handleInputChange}
-                      placeholder="Enter height"
-                    />
-                  </CInputGroup>
-                </CCol>
-              </CRow>
-              <CButton color="primary" type="submit">
-                Submit
-              </CButton>
-            </CForm>
-          </CCardBody>
-        </CCard>
 
-        <ROSControlSection />
+        <ProjectManager /> 
 
         <BehaviorControlModal visible={ctrlVisible} onClose={() => setCtrlVisible(false)} />
 

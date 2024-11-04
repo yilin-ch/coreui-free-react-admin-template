@@ -54,7 +54,7 @@ const behaviorStates = [
     next: { default: 5 },
   },
   {
-    name: "Set File Name and Path",
+    name: "Set File Name",
     _id: "set_file",
     info: "Please provide the file name and path of the record you want to save. If no file path is provided, the default path `/srv/host_data/tmp` will be used.",
     next: { default: 6 },
@@ -67,7 +67,7 @@ const behaviorStates = [
   },
 ];
 
-const ROSControlSection = () => {
+const ROSControlSection = ({ projectName, subjectId, sessionName }) => {
   const [currentStateIndex, setCurrentStateIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -128,20 +128,21 @@ const ROSControlSection = () => {
   };
 
   const handleSetNameAndPath = async () => {
-    const finalPath = filePath || '/srv/host_data/tmp'; // Use default path if none provided
     if (!fileName) {
       alert('Please provide a filename');
       return;
     }
-  
-  
+
+    const finalPath = `/srv/host_data/Projects/${projectName}/${subjectId}/${sessionName}/${fileName}`;
+    const relativePath = `${projectName}/${subjectId}/${sessionName}/${fileName}`;
+
     try {
       const response = await fetch('http://localhost:8000/set_name_and_path/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ filename: fileName, filepath: finalPath }),
+        body: JSON.stringify({ filename: fileName, filepath: finalPath, relativePath: relativePath }),
       });
   
       if (response.ok) {
@@ -206,19 +207,6 @@ const ROSControlSection = () => {
                     value={fileName}
                     onChange={(e) => setFileName(e.target.value)}
                     placeholder="Enter file name"
-                  />
-                </CInputGroup>
-              </CCol>
-              <CCol>
-                <CFormLabel htmlFor="filePath">File Path</CFormLabel>
-                <CInputGroup>
-                  <CFormInput
-                    type="text"
-                    id="filePath"
-                    name="filePath"
-                    value={filePath}
-                    onChange={(e) => setFilePath(e.target.value)}
-                    placeholder="/srv/host_data/tmp"
                   />
                 </CInputGroup>
               </CCol>
